@@ -52,7 +52,12 @@ else:
     "class": "1-1",
     "timetable": {
         "월": [
-            {"period": "1", "subject": "수학", "teacher": "홍길"},
+            {
+                "period": "1",
+                "subject": "수학",
+                "teacher": "홍길동",
+                "changed": false
+            },
             ...
         ],
         "화": [...],
@@ -62,6 +67,11 @@ else:
     }
 }
 ```
+
+- `period`: 교시
+- `subject`: 과목명
+- `teacher`: 담당 교사
+- `changed`: 시간표 변경 여부 (`true`면 변경됨, `false`면 일반)
 
 ## 의존성
 
