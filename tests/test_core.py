@@ -1,0 +1,17 @@
+from nfcl.core import ComciganAPI
+
+
+def test_split_subject_teacher_empty():
+    assert ComciganAPI._split_subject_teacher("") == ("-", "")
+
+
+def test_split_subject_teacher_subject_only():
+    assert ComciganAPI._split_subject_teacher("수학") == ("수학", "")
+
+
+def test_split_subject_teacher_subject_and_teacher():
+    assert ComciganAPI._split_subject_teacher("영어 홍길동") == ("영어", "홍길동")
+
+
+def test_split_subject_teacher_multiline():
+    assert ComciganAPI._split_subject_teacher("물리\n이순신") == ("물리", "이순신")

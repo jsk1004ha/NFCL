@@ -7,6 +7,8 @@
 ## 주요 기능
 
 - **시간표 추출**: 월요일부터 금요일까지의 교시별 과목 및 담당 교사 정보를 추출합니다.
+- **성능 최적화 옵션 기본 적용**: 불필요한 이미지 로딩을 막고, `eager` 페이지 로드 전략으로 응답 속도를 개선했습니다.
+- **세션 재사용 가능**: `ComciganAPI` 인스턴스를 여러 번 호출할 때 브라우저를 재활용할 수 있습니다.
 
 ## 설치 방법
 
@@ -27,21 +29,20 @@ result = nfcl.get_timetable("인천과학고등학교", 1, 1)
 print(result)
 ```
 
-### 2. 클래스 인스턴스 사용 방식 (상세 설정 가능)
+### 2. 클래스 인스턴스 사용 방식 (권장: 반복 조회 시)
 ```python
 from nfcl import ComciganAPI
 
 # API 객체 생성 (headless=False로 설정하면 브라우저 창이 보입니다)
-api = ComciganAPI(headless=True)
+with ComciganAPI(headless=True, timeout_seconds=12) as api:
+    # 첫 조회
+    result1 = api.get_timetable("인천과학고등학교", 1, 1)
 
-# 시간표 가져오기
-result = api.get_timetable("인천과학고등학교", 1, 1)
+    # 같은 브라우저 세션으로 추가 조회
+    result2 = api.get_timetable("인천과학고등학교", 1, 2)
 
-if "error" in result:
-    print(f"에러 발생: {result['error']}")
-else:
-    print(f"학교: {result['school']}")
-    print(f"학급: {result['class']}")
+    print(result1)
+    print(result2)
 ```
 
 ### 결과 데이터 구조
@@ -57,13 +58,12 @@ else:
                 "subject": "수학",
                 "teacher": "홍길동",
                 "changed": false
-            },
-            ...
+            }
         ],
-        "화": [...],
-        "수": [...],
-        "목": [...],
-        "금": [...]
+        "화": [],
+        "수": [],
+        "목": [],
+        "금": []
     }
 }
 ```
