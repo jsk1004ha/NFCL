@@ -81,3 +81,17 @@ with ComciganAPI(headless=True, timeout_seconds=12) as api:
 ## 라이선스
 
 이 프로젝트는 MIT 라이선스 하에 배포됩니다.
+
+## 문제 해결 (Troubleshooting)
+
+### `RuntimeError: selenium 및 webdriver-manager 의존성이 필요합니다`
+이 오류는 `selenium` 또는 `webdriver-manager` 패키지가 올바르게 설치되지 않았을 때 발생합니다.
+아래 명령어로 직접 의존성을 설치해보세요:
+
+```bash
+pip install selenium webdriver-manager
+```
+
+### 브라우저 닫힘 현상
+`ComciganAPI`를 `with` 구문 없이 사용할 경우, Python 스크립트가 종료될 때 브라우저도 함께 닫힐 수 있습니다. 프로세스가 종료되지 않게 하려면 `time.sleep()` 등을 사용하여 대기하거나, `headless=True` (기본값) 모드를 사용하세요.
+
