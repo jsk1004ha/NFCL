@@ -1,15 +1,28 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
-from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import Select, WebDriverWait
-from webdriver_manager.chrome import ChromeDriverManager
+try:
+    from selenium import webdriver
+    from selenium.common.exceptions import NoSuchElementException, TimeoutException
+    from selenium.webdriver.chrome.service import Service
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.support.ui import Select, WebDriverWait
+    from webdriver_manager.chrome import ChromeDriverManager
+    _SELENIUM_IMPORT_ERROR: Optional[Exception] = None
+except Exception as import_error:  # pragma: no cover
+    webdriver = None
+    NoSuchElementException = Exception
+    TimeoutException = Exception
+    Service = None
+    By = None
+    EC = None
+    Select = None
+    WebDriverWait = None
+    ChromeDriverManager = None
+    _SELENIUM_IMPORT_ERROR = import_error
 
 
 @dataclass(frozen=True)
@@ -25,11 +38,18 @@ class ComciganAPI:
     WEEK_DAYS = ("월", "화", "수", "목", "금")
 
     def __init__(self, headless: bool = True, timeout_seconds: int = 12):
+        if _SELENIUM_IMPORT_ERROR is not None:
+            raise RuntimeError(
+                "selenium 및 webdriver-manager 의존성이 필요합니다. "
+                "`pip install selenium webdriver-manager` 후 다시 시도해주세요."
+            ) from _SELENIUM_IMPORT_ERROR
+
+
         self.config = ComciganConfig(headless=headless, timeout_seconds=timeout_seconds)
         self.driver = self._create_driver()
         self.wait = WebDriverWait(self.driver, self.config.timeout_seconds)
 
-    def _create_driver(self) -> webdriver.Chrome:
+    def _create_driver(self):
         options = webdriver.ChromeOptions()
         options.page_load_strategy = "eager"
         options.add_experimental_option("excludeSwitches", ["enable-logging"])

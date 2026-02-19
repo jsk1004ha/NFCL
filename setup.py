@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="NFCL",                    # pip 설치 이름
-    version="0.1.1",                # 버전 (업데이트할 때마다 올려야 함)
+    version="0.1.2",                # 버전 (업데이트할 때마다 올려야 함)
     description="New Fantastic Comsigan Loader - Korean School Timetable Scraper",
     author="YourName",              # 본인 이름이나 닉네임
     packages=find_packages(),
