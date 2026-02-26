@@ -36,6 +36,7 @@ class ComciganAPI:
     """컴시간 알리미 시간표를 수집하는 API 클라이언트."""
 
     WEEK_DAYS = ("월", "화", "수", "목", "금")
+    _CHROMEDRIVER_PATH: Optional[str] = None
 
     def __init__(self, headless: bool = True, timeout_seconds: int = 12):
         if _SELENIUM_IMPORT_ERROR is not None:
@@ -53,16 +54,27 @@ class ComciganAPI:
         options = webdriver.ChromeOptions()
         options.page_load_strategy = "eager"
         options.add_experimental_option("excludeSwitches", ["enable-logging"])
+        options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
+        options.add_argument("--disable-extensions")
+        options.add_argument("--no-first-run")
+        options.add_argument("--no-default-browser-check")
         options.add_argument("--window-size=1200,900")
         options.add_argument("--blink-settings=imagesEnabled=false")
         if self.config.headless:
             options.add_argument("--headless=new")
 
+        service = Service(self._get_cached_chromedriver_path())
         return webdriver.Chrome(
-            service=Service(ChromeDriverManager().install()),
+            service=service,
             options=options,
         )
+
+    @classmethod
+    def _get_cached_chromedriver_path(cls) -> str:
+        if cls._CHROMEDRIVER_PATH is None:
+            cls._CHROMEDRIVER_PATH = ChromeDriverManager().install()
+        return cls._CHROMEDRIVER_PATH
 
     def close(self) -> None:
         if self.driver:
@@ -154,7 +166,10 @@ class ComciganAPI:
             return {"error": "브라우저 세션이 종료되었습니다. 새 ComciganAPI 인스턴스를 생성해주세요."}
 
         try:
-            self.driver.get(self.config.base_url)
+            if not self.driver.current_url.startswith(self.config.base_url):
+                self.driver.get(self.config.base_url)
+            else:
+                self.driver.refresh()
 
             if not self._switch_to_search_context():
                 return {"error": "프레임 탐색 실패"}
@@ -169,6 +184,9 @@ class ComciganAPI:
 
             found_school_name = ""
             clicked = False
+            normalized_input = school_name.replace(" ", "")
+
+            candidate_rows = []
             for row in rows:
                 cols = row.find_elements(By.TAG_NAME, "td")
                 if len(cols) < 2:
@@ -179,11 +197,22 @@ class ComciganAPI:
                 except NoSuchElementException:
                     continue
 
-                if school_name in link.text:
-                    found_school_name = link.text
+                candidate_rows.append((link.text, link))
+
+            for link_text, link in candidate_rows:
+                if link_text.replace(" ", "") == normalized_input:
+                    found_school_name = link_text
                     link.click()
                     clicked = True
                     break
+
+            if not clicked:
+                for link_text, link in candidate_rows:
+                    if school_name in link_text:
+                        found_school_name = link_text
+                        link.click()
+                        clicked = True
+                        break
 
             if not clicked:
                 return {"error": f"'{school_name}' 학교를 찾을 수 없습니다."}
