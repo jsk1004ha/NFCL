@@ -8,6 +8,7 @@
 
 - **시간표 추출**: 월요일부터 금요일까지의 교시별 과목 및 담당 교사 정보를 추출합니다.
 - **성능 최적화 옵션 기본 적용**: 불필요한 이미지 로딩을 막고, `eager` 페이지 로드 전략으로 응답 속도를 개선했습니다.
+- **가벼운 import**: 실제 조회를 시작할 때만 Selenium을 불러와 단순 import 비용을 줄였습니다.
 - **세션 재사용 가능**: `ComciganAPI` 인스턴스를 여러 번 호출할 때 브라우저를 재활용할 수 있습니다.
 
 ## 설치 방법
@@ -75,8 +76,9 @@ with ComciganAPI(headless=True, timeout_seconds=12) as api:
 
 ## 의존성
 
-- [selenium](https://pypi.org/project/selenium/)
-- [webdriver-manager](https://pypi.org/project/webdriver-manager/)
+- [selenium 4.6+](https://pypi.org/project/selenium/)
+
+`webdriver-manager`는 더 이상 필수 의존성이 아닙니다. Selenium의 내장 드라이버 관리 기능을 사용합니다.
 
 ## 라이선스
 
@@ -84,12 +86,12 @@ with ComciganAPI(headless=True, timeout_seconds=12) as api:
 
 ## 문제 해결 (Troubleshooting)
 
-### `RuntimeError: selenium 및 webdriver-manager 의존성이 필요합니다`
-이 오류는 `selenium` 또는 `webdriver-manager` 패키지가 올바르게 설치되지 않았을 때 발생합니다.
+### `RuntimeError: selenium 의존성이 필요합니다`
+이 오류는 `selenium` 패키지가 올바르게 설치되지 않았을 때 발생합니다.
 아래 명령어로 직접 의존성을 설치해보세요:
 
 ```bash
-pip install selenium webdriver-manager
+pip install "selenium>=4.6"
 ```
 
 ### 브라우저 닫힘 현상

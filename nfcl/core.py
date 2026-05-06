@@ -1,28 +1,23 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
-try:
-    from selenium import webdriver
-    from selenium.common.exceptions import NoSuchElementException, TimeoutException
-    from selenium.webdriver.chrome.service import Service
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.support import expected_conditions as EC
-    from selenium.webdriver.support.ui import Select, WebDriverWait
-    from webdriver_manager.chrome import ChromeDriverManager
-    _SELENIUM_IMPORT_ERROR: Optional[Exception] = None
-except Exception as import_error:  # pragma: no cover
-    webdriver = None
-    NoSuchElementException = Exception
-    TimeoutException = Exception
-    Service = None
-    By = None
-    EC = None
-    Select = None
-    WebDriverWait = None
-    ChromeDriverManager = None
-    _SELENIUM_IMPORT_ERROR = import_error
+
+def _load_selenium():
+    """Selenium은 실제 브라우저 세션이 필요할 때만 불러온다."""
+    try:
+        from selenium import webdriver
+        from selenium.common.exceptions import NoSuchElementException, TimeoutException
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support import expected_conditions as EC
+        from selenium.webdriver.support.ui import Select, WebDriverWait
+    except Exception as import_error:  # pragma: no cover
+        raise RuntimeError(
+            "selenium 의존성이 필요합니다. `pip install selenium>=4.6` 후 다시 시도해주세요."
+        ) from import_error
+
+    return webdriver, NoSuchElementException, TimeoutException, By, EC, Select, WebDriverWait
 
 
 @dataclass(frozen=True)
@@ -38,19 +33,21 @@ class ComciganAPI:
     WEEK_DAYS = ("월", "화", "수", "목", "금")
 
     def __init__(self, headless: bool = True, timeout_seconds: int = 12):
-        if _SELENIUM_IMPORT_ERROR is not None:
-            raise RuntimeError(
-                "selenium 및 webdriver-manager 의존성이 필요합니다. "
-                "`pip install selenium webdriver-manager` 후 다시 시도해주세요."
-            ) from _SELENIUM_IMPORT_ERROR
-
-
+        (
+            self._webdriver,
+            self._NoSuchElementException,
+            self._TimeoutException,
+            self._By,
+            self._EC,
+            self._Select,
+            self._WebDriverWait,
+        ) = _load_selenium()
         self.config = ComciganConfig(headless=headless, timeout_seconds=timeout_seconds)
         self.driver = self._create_driver()
-        self.wait = WebDriverWait(self.driver, self.config.timeout_seconds)
+        self.wait = self._WebDriverWait(self.driver, self.config.timeout_seconds)
 
     def _create_driver(self):
-        options = webdriver.ChromeOptions()
+        options = self._webdriver.ChromeOptions()
         options.page_load_strategy = "eager"
         options.add_experimental_option("excludeSwitches", ["enable-logging"])
         options.add_argument("--disable-gpu")
@@ -59,10 +56,7 @@ class ComciganAPI:
         if self.config.headless:
             options.add_argument("--headless=new")
 
-        return webdriver.Chrome(
-            service=Service(ChromeDriverManager().install()),
-            options=options,
-        )
+        return self._webdriver.Chrome(options=options)
 
     def close(self) -> None:
         if self.driver:
@@ -80,9 +74,9 @@ class ComciganAPI:
 
         def _has_search_box() -> bool:
             try:
-                driver.find_element(By.ID, "sc")
+                driver.find_element(self._By.ID, "sc")
                 return True
-            except NoSuchElementException:
+            except self._NoSuchElementException:
                 return False
 
         driver.switch_to.default_content()
@@ -90,7 +84,7 @@ class ComciganAPI:
             return True
 
         for selector in ("frame", "iframe"):
-            frames = driver.find_elements(By.TAG_NAME, selector)
+            frames = driver.find_elements(self._By.TAG_NAME, selector)
             for frame in frames:
                 driver.switch_to.default_content()
                 driver.switch_to.frame(frame)
@@ -114,11 +108,11 @@ class ComciganAPI:
 
     def _extract_timetable(self) -> Dict[str, List[Dict[str, str]]]:
         schedule = {day: [] for day in self.WEEK_DAYS}
-        rows = self.driver.find_elements(By.TAG_NAME, "tr")
+        rows = self.driver.find_elements(self._By.TAG_NAME, "tr")
         header_count = 0
 
         for row in rows:
-            periods = row.find_elements(By.CLASS_NAME, "교시")
+            periods = row.find_elements(self._By.CLASS_NAME, "교시")
             if not periods:
                 continue
 
@@ -130,7 +124,7 @@ class ComciganAPI:
                 continue
 
             simple_period = period_text.split("(")[0].strip()
-            cells = row.find_elements(By.CSS_SELECTOR, "td.내용, td.변경")
+            cells = row.find_elements(self._By.CSS_SELECTOR, "td.내용, td.변경")
             if len(cells) != 5:
                 continue
 
@@ -159,24 +153,28 @@ class ComciganAPI:
             if not self._switch_to_search_context():
                 return {"error": "프레임 탐색 실패"}
 
-            search_box = self.wait.until(EC.element_to_be_clickable((By.ID, "sc")))
+            search_box = self.wait.until(
+                self._EC.element_to_be_clickable((self._By.ID, "sc"))
+            )
             search_box.clear()
             search_box.send_keys(school_name)
-            self.driver.find_element(By.CSS_SELECTOR, 'input[value="검색"]').click()
+            self.driver.find_element(self._By.CSS_SELECTOR, 'input[value="검색"]').click()
 
-            self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "tr.검색")))
-            rows = self.driver.find_elements(By.CSS_SELECTOR, "tr.검색")
+            self.wait.until(
+                self._EC.presence_of_all_elements_located((self._By.CSS_SELECTOR, "tr.검색"))
+            )
+            rows = self.driver.find_elements(self._By.CSS_SELECTOR, "tr.검색")
 
             found_school_name = ""
             clicked = False
             for row in rows:
-                cols = row.find_elements(By.TAG_NAME, "td")
+                cols = row.find_elements(self._By.TAG_NAME, "td")
                 if len(cols) < 2:
                     continue
 
                 try:
-                    link = cols[1].find_element(By.TAG_NAME, "a")
-                except NoSuchElementException:
+                    link = cols[1].find_element(self._By.TAG_NAME, "a")
+                except self._NoSuchElementException:
                     continue
 
                 if school_name in link.text:
@@ -188,15 +186,19 @@ class ComciganAPI:
             if not clicked:
                 return {"error": f"'{school_name}' 학교를 찾을 수 없습니다."}
 
-            select_el = self.wait.until(EC.presence_of_element_located((By.ID, "ba")))
-            selector = Select(select_el)
+            select_el = self.wait.until(
+                self._EC.presence_of_element_located((self._By.ID, "ba"))
+            )
+            selector = self._Select(select_el)
             try:
                 selector.select_by_value(f"{grade}-{class_num}")
-            except NoSuchElementException:
+            except self._NoSuchElementException:
                 return {"error": "해당 반 정보가 없습니다."}
 
             self.wait.until(
-                EC.presence_of_all_elements_located((By.CSS_SELECTOR, "td.내용, td.변경"))
+                self._EC.presence_of_all_elements_located(
+                    (self._By.CSS_SELECTOR, "td.내용, td.변경")
+                )
             )
             final_schedule = self._extract_timetable()
 
@@ -206,7 +208,7 @@ class ComciganAPI:
                 "timetable": final_schedule,
             }
 
-        except TimeoutException:
+        except self._TimeoutException:
             return {"error": "요청 제한 시간 초과. 학교명/반 정보를 확인하거나 잠시 후 다시 시도해주세요."}
         except Exception as exc:
             return {"error": str(exc)}

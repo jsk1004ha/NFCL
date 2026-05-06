@@ -16,3 +16,16 @@ env/
 
 # PyPI 업로드 설정 파일 (내 비밀번호 들어있음!! 절대 금지)
 .pypirc
+
+.omx
+.codex
+.codex/*
+!.codex/agents/
+!.codex/agents/**
+!.codex/skills/
+!.codex/skills/**
+.codex/skills/.system/**
+!.codex/prompts/
+!.codex/prompts/**
+.github
+AGENTS.md

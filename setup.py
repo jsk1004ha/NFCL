@@ -7,8 +7,7 @@ setup(
     author="YourName",              # 본인 이름이나 닉네임
     packages=find_packages(),
     install_requires=[              # 의존성 라이브러리 자동 설치
-        "selenium",
-        "webdriver-manager"
+        "selenium>=4.6",
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.7',
 )
